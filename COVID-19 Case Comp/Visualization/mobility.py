@@ -14,21 +14,23 @@ REGIONS_OF_INTEREST = ['Algoma', 'Brant', 'Chatham-Kent', 'Durham', 'Halton',
                        'Hamilton', 'Lambton', 'Middlesex', 'Niagara', 'Ottawa',
                        'Peel', 'Peterborough', 'Waterloo', 'Thunder Bay',
                        'Timiskaming', 'Toronto', 'York']
+
 MOBILITY_TYPES = ['retail+rec', 'grocery+pharm', 'parks', 'transit', 'workplaces', 'residential']
-COLORMAP = {'01':'red','02':'red',
-            '03':'blue','04':'blue',
-            '05':'green','06':'green',
-            '07':'yellow','08':'yellow',
-            '09':'purple','10':'purple',
+
+COLORMAP = {'01':'tab:blue','02':'tab:orange',
+            '03':'tab:green','04':'tab:red',
+            '05':'tab:purple','06':'tab:brown',
+            '07':'tab:pink','08':'tab:gray',
+            '09':'tab:olive','10':'tab:cyan',
             '11':'black','12':'black'}
 
 def get_weekday(row):
     date = datetime.strptime(row['date'], '%Y-%m-%d')
     return calendar.day_name[date.weekday()]
 
-region = 'Algoma'
+region = 'Toronto'
 mob_type = 'retail+rec'
-lag = 7
+lag = 0
 
 mobility = pd.read_csv("../Datasets/Mobility Data/2020_CA_Region_Mobility_Report.csv")
 mobility['weekday'] = mobility.apply(lambda row: get_weekday(row), axis=1)
@@ -38,27 +40,71 @@ mobility = mobility[cols]
 mobility = mobility.loc[mobility['sub_region_1'] == 'Ontario']
 mobility = mobility.loc[mobility['sub_region_2'].notnull()]
 
-cases = pd.read_csv("../Datasets/ON regional cases.csv")
+cases = pd.read_csv("../Datasets/conposcovidloc.csv")
+cases = cases[cases['Accurate_Episode_Date'].notna()]
 
 
-def plot_mobility_by_region(mobility, cases, region, mob_type):
+def remove_month(mobility, cases, month):
+    mobility = mobility[~mobility.date.str.contains("2020-"+month)]
+    cases = cases[~cases.Accurate_Episode_Date.str.contains("2020-"+month)]
+    return mobility, cases
+    
+'''
+mobility, cases = remove_month(mobility, cases, '01')
+mobility, cases = remove_month(mobility, cases, '02')
+#mobility, cases = remove_month(mobility, cases, '03')
+#mobility, cases = remove_month(mobility, cases, '04')
+#mobility, cases = remove_month(mobility, cases, '05')
+#mobility, cases = remove_month(mobility, cases, '06')
+#mobility, cases = remove_month(mobility, cases, '07')
+mobility, cases = remove_month(mobility, cases, '08')
+mobility, cases = remove_month(mobility, cases, '09')
+mobility, cases = remove_month(mobility, cases, '10')
+mobility, cases = remove_month(mobility, cases, '11')
+mobility, cases = remove_month(mobility, cases, '12')
+'''
+
+def to_weekly(mobility, cases, region):
+    mobility['date'] = pd.to_datetime(mobility['date']) - pd.to_timedelta(7, unit='d')
+    mobility = mobility.groupby(['region', pd.Grouper(key='date', freq='W-MON')])['retail+rec', 
+                                                                                               'grocery+pharm',
+                                                                                               'parks',
+                                                                                               'transit',
+                                                                                               'workplaces',
+                                                                                               'residential'].mean().reset_index().sort_values('date')
+    mobility['date'] = mobility['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
+    
+    phu_regions = np.sort(cases['Reporting_PHU'].unique())
+    cases = cases[['Accurate_Episode_Date', 'Reporting_PHU']]
+    cases = cases.loc[cases["Reporting_PHU"] == next((s for s in phu_regions if region in s), None)]
+    cases['Accurate_Episode_Date'] = pd.to_datetime(cases['Accurate_Episode_Date']) - pd.to_timedelta(7, unit='d')
+    cases['Accurate_Episode_Date'] = cases['Accurate_Episode_Date'].apply(lambda x: x - timedelta(days = x.weekday()))
+    cases['Accurate_Episode_Date'] = cases['Accurate_Episode_Date'].apply(lambda x: x.strftime('%Y-%m-%d'))
+    return mobility, cases
+
+
+def plot_mobility_by_region(mobility, cases, region, mob_type, weekly=False):
     mobility = mobility.loc[mobility['sub_region_2'] == next((s for s in mobility['sub_region_2'].unique() if region in s), None)]
-    mobility = mobility[["date", "weekday",
+    mobility = mobility[["sub_region_2", "date", "weekday",
                      "retail_and_recreation_percent_change_from_baseline", 
                      "grocery_and_pharmacy_percent_change_from_baseline", 
                      "parks_percent_change_from_baseline", 
                      "transit_stations_percent_change_from_baseline", 
                      "workplaces_percent_change_from_baseline", 
                      "residential_percent_change_from_baseline"]]
-    mobility.columns = ['date', 'weekday', 'retail+rec', 'grocery+pharm', 'parks', 'transit', 'workplaces', 'residential']
+    mobility.columns = ['region', 'date', 'weekday', 'retail+rec', 'grocery+pharm', 'parks', 'transit', 'workplaces', 'residential']
     mobility = mobility.dropna()
 
     phu_regions = np.sort(cases['Reporting_PHU'].unique())
     cases = cases[['Accurate_Episode_Date', 'Reporting_PHU']]
     cases = cases.dropna()
-    cases['Accurate_Episode_Date'] = cases['Accurate_Episode_Date'].str[:-9]
+    #cases['Accurate_Episode_Date'] = cases['Accurate_Episode_Date'].str[:-9]
     
     cases = cases.loc[cases["Reporting_PHU"] == next((s for s in phu_regions if region in s), None)]
+    
+    if weekly:
+        mobility, cases = to_weekly(mobility, cases, 'Toronto')
+
     dates = cases['Accurate_Episode_Date'].reset_index(drop=True)
     for i in range(0, len(dates)):
         date = dates[i]
@@ -93,6 +139,7 @@ def plot_mobility_by_region(mobility, cases, region, mob_type):
     linreg = sp.stats.linregress(mobility[mob_type], mobility['case episodes'])
     rvalue = round(linreg.rvalue, 2)
     plt.title(region + ": " + str(rvalue))    
+    print(mob_type, rvalue)
 
 def compare_regions(mob_type):
     for region in REGIONS_OF_INTEREST:
@@ -106,6 +153,14 @@ def plot_all():
     for region in REGIONS_OF_INTEREST:
         for mob_type in MOBILITY_TYPES:
             plot_mobility_by_region(mobility, cases, region, mob_type)
+
+compare_mob_type('Toronto')
+
+
+
+
+
+
 
 
 # Is there a significant difference in mobility + mobility types between weekdays/weekends?
@@ -155,3 +210,8 @@ dates = cases['weekday'].reset_index(drop=True)
 date_count = dates.value_counts()
 date_count = date_count.sort_index()
 date_count = date_count.to_dict()
+
+# More questions:
+    # Adjust lag to see if my hypothesis is right that case counts are actually affecting mobility
+        #look at effect of mobility on the derivative of cases?
+    
