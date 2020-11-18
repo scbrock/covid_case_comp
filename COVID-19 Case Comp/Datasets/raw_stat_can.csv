@@ -1,0 +1,34 @@
+﻿"Population estimates, quarterly" 1 2 3 4
+"Quarterly"
+"Table: 17-10-0009-01 (formerly CANSIM 051-0005)"
+"Geography: Canada, Province or territory"
+
+"Geography","Q3 2019","Q4 2019","Q1 2020","Q2 2020","Q3 2020"
+"","Persons",,,,
+"Canada","37,593,384","37,802,043","37,899,277","37,979,854","38,005,238"
+"Newfoundland and Labrador","523,476","524,137","523,631","522,994","522,103"
+"Prince Edward Island","157,262","158,334","158,629","159,249","159,625"
+"Nova Scotia","969,747","975,231","975,898","977,043","979,351"
+"New Brunswick","776,868","780,154","780,040","781,024","781,476"
+"Quebec","8,501,703","8,540,429","8,556,650","8,572,054","8,574,571"
+"Ontario","14,544,718","14,637,880","14,689,075","14,723,497","14,734,014"
+"Manitoba","1,369,540","1,373,574","1,377,004","1,378,818","1,379,263"
+"Saskatchewan","1,172,302","1,176,272","1,179,154","1,179,618","1,178,681"
+"Alberta","4,361,694","4,384,968","4,402,045","4,417,006","4,421,876"
+"British Columbia","5,090,955","5,125,659","5,131,575","5,142,404","5,147,712"
+"Yukon","41,477","41,668","41,731","41,980","42,052"
+"Northwest Territories 5 (map)","45,028","45,100","45,119","45,201","45,161"
+"Nunavut 5 (map)","38,614","38,637","38,726","38,966","39,353"
+
+Symbol legend:
+
+Footnotes:
+1,Postcensal estimates are based on the 2016 Census counts adjusted for census net undercoverage (CNU) (including adjustment for incompletely enumerated Indian reserves (IEIR)) and the components of demographic growth that occurred since that census. Intercensal estimates are produced using counts from two consecutive censuses adjusted for CNU (including (IEIR) and postcensal estimates.
+2,Quarterly population estimates: Quarter I = January 1; Quarter II = April 1; Quarter III = July 1; Quarter IV = October 1.
+3,"Estimates are final intercensal and unadjusted for census net undercoverage prior to July 1, 1971. Estimates are final intercensal from July 1, 1971 to April 1, 2016, final postcensal from July 1, 2016 to July 1, 2018, updated postcensal from October 1, 2018 to April 1, 2020 and preliminary postcensal from July 1, 2020."
+4,"The population growth, which is used to calculate population estimates, is comprised of the natural growth (Table 17100059), international migration (Table 17100040) and interprovincial migration (Tables 17100020 and 17100045)."
+5,"Prior to July 1, 1991, only population estimates for Northwest Territories and Nunavut combined are available."
+
+"How to cite: Statistics Canada. Table 17-10-0009-01 Population estimates, quarterly"
+https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710000901
+DOI: https://doi.org/10.25318/1710000901-eng
