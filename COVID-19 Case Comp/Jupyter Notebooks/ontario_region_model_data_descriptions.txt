@@ -1,0 +1,41 @@
+Variable definitions 
+
+constant - constant term for intercept
+region - region name
+population - population count
+area - region area
+pop_density - region population density
+date - date
+weekday - day of the week
+new_cases - number of new cases
+retailrec - retail recreation change from baseline (see Google mobility definition)
+grocerypharm - grocery and pharmacy change from baseline (see Google mobility definition)
+parks - parks change from baseline (see Google mobility definition)
+transit - transit change from baseline (see Google mobility definition)
+workplaces - change from baseline (see Google mobility definition)
+residential - change from baseline (see Google mobility definition)
+school_closing - score Canada wide
+workplace_closing - score Canada wide
+cancel_events - score Canada wide
+gatherings_restrictions- score Canada wide
+transport_closing - score Canada wide
+stay_home_restrictions- score Canada wide
+internal_movement_restrictions - score Canada wide
+international_movement_restrictions- score Canada wide
+information_campaigns - 
+testing_policy -
+contact_tracing -
+stringency_index 
+new7 - case count on the next week same day of week
+is_weekday - yes or no 
+is_winter - yes or no
+is_spring - yes or no
+is_summer - yes or no
+is_fall - yes or no
+new_lag7 - new cases with 7 day lag, same as new 7 so is redundant
+3d_SMA - 3 day simple moving average (SMA) over case counts where day d is (1/3)*(count_{d-2} + count_{d-1} + count_{d})
+3d_SMA_lag7 - 7 day lag applied to 3d_SMA
+sma14_lag6 - 14 day SMA, day before 7 day lag
+sma14_lag5 - 14 day SMA, 2 days before 7 day lag
+sma14_lag4 - 14 day SMA, 3 days before 7 day lag
+day_num - day number
