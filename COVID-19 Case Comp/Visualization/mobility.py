@@ -117,7 +117,7 @@ def plot_all():
         for mob_type in MOBILITY_TYPES:
             plot_mobility_by_region(df, region, mob_type)
 
-compare_mob_type('Toronto')
+# compare_mob_type('Toronto')
 
 
 
