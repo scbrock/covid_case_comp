@@ -13,7 +13,7 @@ end_date = max(mobility['date'])
 date_list = pd.Series(pd.date_range(start_date, end_date).format())
 
 populations = {
-    'Durham': 697355, 'Halton': 596369, 'Hamilton': 574263, 
+    'Durham': 697355, 'Halton': 596369, 'Hamilton': 574263,
     'Middlesex': 506008, 'Niagara': 479183, 'Ottawa': 1028514, 'Peel': 1541994,
     'Toronto': 2965713, 'Waterloo': 595465, 'York': 1181485}
 # https://www.citypopulation.de/en/canada/ontario/admin/
@@ -71,25 +71,25 @@ for r in REGIONS_OF_INTEREST:
     c2 = c2.reset_index()
     case_list.append(c2)
 cases = pd.concat(case_list).reset_index(drop=True)
-    
-datacan = datacan[['date', 'key_apple_mobility', 'school_closing', 'workplace_closing',
-                  'cancel_events', 'gatherings_restrictions', 'transport_closing',
-                  'stay_home_restrictions', 'internal_movement_restrictions', 'international_movement_restrictions',
-                  'information_campaigns', 'testing_policy', 'contact_tracing', 'stringency_index']]
-datacan = datacan[datacan['key_apple_mobility'] == 'Ontario']
-datacan = datacan.drop(columns=['key_apple_mobility'])
+
+#datacan = datacan[['date', 'key_apple_mobility', 'school_closing', 'workplace_closing',
+#                  'cancel_events', 'gatherings_restrictions', 'transport_closing',
+#                  'stay_home_restrictions', 'internal_movement_restrictions', 'international_movement_restrictions',
+#                  'information_campaigns', 'testing_policy', 'contact_tracing', 'stringency_index']]
+#datacan = datacan[datacan['key_apple_mobility'] == 'Ontario']
+#datacan = datacan.drop(columns=['key_apple_mobility'])
 
 df = pd.merge(mobility, cases, on=['date', 'region'])
-df = pd.merge(df, datacan, on=['date'], how='outer')
+#df = pd.merge(df, datacan, on=['date'], how='outer')
 df = df.sort_values(by=['region', 'date']).reset_index(drop=True)
 df['population'] = df['region'].map(populations)
 df['area'] = df['region'].map(areas)
 df['pop_density'] = df['population']/df['area']
 df = df[['region','population','area','pop_density','date','weekday','new_cases','retail+rec',
-         'grocery+pharm','parks','transit','workplaces','residential','school_closing','workplace_closing',
-         'cancel_events','gatherings_restrictions','transport_closing','stay_home_restrictions',
-         'internal_movement_restrictions','international_movement_restrictions','information_campaigns',
-         'testing_policy','contact_tracing','stringency_index']]
+         'grocery+pharm','parks','transit','workplaces','residential']]#,'school_closing','workplace_closing',
+         #'cancel_events','gatherings_restrictions','transport_closing','stay_home_restrictions',
+         #'internal_movement_restrictions','international_movement_restrictions','information_campaigns',
+         #'testing_policy','contact_tracing','stringency_index']]
 df = df[df['new_cases'].notna()]
 
 df.to_csv('Datasets/full_data.csv', index=False)

@@ -10,12 +10,11 @@ from scipy.stats import ttest_ind
 # How does the relationship between mobility + case counts differ between regions?
 # How does the relationship between mobility + case counts differ between mobility types?
 
+df = pd.read_csv('../Datasets/full_data_7SMA.csv')
 df = pd.read_csv('../Datasets/full_data.csv')
 
-REGIONS_OF_INTEREST = ['Algoma', 'Brant', 'Chatham-Kent', 'Durham', 'Halton',
-                       'Hamilton', 'Lambton', 'Middlesex', 'Niagara', 'Ottawa',
-                       'Peel', 'Peterborough', 'Waterloo', 'Thunder Bay',
-                       'Timiskaming', 'Toronto', 'York']
+REGIONS_OF_INTEREST = ['Durham', 'Halton', 'Hamilton', 'Middlesex', 'Niagara', 'Ottawa',
+                       'Peel', 'Waterloo', 'Toronto', 'York']
 
 MOBILITY_TYPES = ['retail+rec', 'grocery+pharm', 'parks', 'transit', 'workplaces', 'residential']
 
@@ -145,7 +144,7 @@ def weekdays_vs_weekends(df, region):
         weekends_mean[mob_type] = mean
         
         stat, p = ttest_ind(weekdays, weekends)
-        print('mobility difference: stat=%.3f, p=%.3f' % (stat, p))
+        print('mobility difference - ' + str(mob_type) + ': stat=%.3f, p=%.3f' % (stat, p))
     
     days = df.groupby(['weekday']).agg({'new_cases': 'sum'})
 
