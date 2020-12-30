@@ -11,19 +11,19 @@ from scipy.stats import ttest_ind
 # How does the relationship between mobility + case counts differ between mobility types?
 
 df = pd.read_csv('../Datasets/full_data_7SMA.csv')
-df = pd.read_csv('../Datasets/full_data.csv')
+#df = pd.read_csv('../Datasets/full_data.csv')
 
 REGIONS_OF_INTEREST = ['Durham', 'Halton', 'Hamilton', 'Middlesex', 'Niagara', 'Ottawa',
                        'Peel', 'Waterloo', 'Toronto', 'York']
 
 MOBILITY_TYPES = ['retail+rec', 'grocery+pharm', 'parks', 'transit', 'workplaces', 'residential']
 
-COLORMAP = {'01':'tab:blue','02':'tab:orange',
-            '03':'tab:green','04':'tab:red',
-            '05':'tab:purple','06':'tab:brown',
-            '07':'tab:pink','08':'tab:gray',
-            '09':'tab:olive','10':'tab:cyan',
-            '11':'black','12':'black'}
+COLORMAP = {'02':'tab:blue','03':'tab:orange',
+            '04':'tab:green','05':'tab:red',
+            '06':'tab:purple','07':'tab:brown',
+            '08':'tab:pink','09':'tab:gray',
+            '10':'tab:olive','11':'tab:cyan',
+            '12':'black'}
 
 region = 'Toronto'
 mob_type = 'retail+rec'
@@ -84,14 +84,18 @@ def plot_mobility_by_region(df, region, mob_type, weekly=False):
             new_cases_2.append(None)
         else:
             new_cases_2.append(df.loc[df['date']==date, 'new_cases'].to_string(index=False)[1:])
-
+    for i in range(0, len(new_cases_2)-1):
+        if new_cases_2[i] is not None:
+            new_cases_2[i] = float(new_cases_2[i])
+            
     df = df.reset_index()
     df['new_cases_2'] = pd.Series(new_cases_2)
+    df = df.replace(to_replace='None', value=np.nan).dropna()
     
     colours = list()
     for i in df['date']:
         month = i[5:7]
-        colours.append(COLORMAP[month])      
+        colours.append(COLORMAP[month])
     df['colour'] = colours
     
     plt.figure()
@@ -117,6 +121,7 @@ def plot_all():
             plot_mobility_by_region(df, region, mob_type)
 
 # compare_mob_type('Toronto')
+# compare_regions('retail+rec')
 
 
 
