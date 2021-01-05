@@ -1,140 +1,252 @@
-# Change working directory
-cwd = getwd()
-wd = file.path(cwd, "COVID-19 Case Comp", "R files")
-setwd(wd)
-
-library(mgcv)
 library(ggplot2)
 library(data.table)
+library(mgcv)
 library(dplyr)
 
-path = file.path("..", "Datasets", "Mobility Data", "2020_US_Region_Mobility_Report.csv")
-mob_data = read.csv(path)
+path = file.path("..", "Datasets", "full_data.csv")
+data = read.csv(path)
+data$date = as.Date(data$date)
+colnames(data)
 
-colnames(mob_data)[6] = "state"
-mob_data = filter(mob_data, state != "")
-mob_data$state = sapply(mob_data$state, function(x) {gsub("US-", "", x)})
-mob_data$state = as.factor(mob_data$state)
-mob_data$date = as.Date(mob_data$date, format = "%Y-%m-%d")
-
-path = file.path("usdata.csv")
-usdata = read.csv(path, stringsAsFactors = FALSE)
-usdata = usdata[, c(2, 3, 7, 12, ncol(usdata))]
-colnames(usdata)[1] = "date"
-usdata[1, ]
-str(usdata$date)
-usdata$date = strptime(usdata$date,format="%m/%d/%Y")
-usdata$date = as.Date(usdata$date, format = "%Y-%m-%d")
-
-# now merge mob_data and usdata. Merge on state
-usd = merge(mob_data, usdata)
-#write.csv(usd, file="usdata.csv")
-
-
-mob_data = mob_data[, c(6, 8, 9, 10, 11, 12, 13, 14)]
-colnames(mob_data)
-state_pops = list(
-    "CO" = 5758736,
-    "FL" = 21477737,
-    "AZ" = 7278717,
-    "SC" = 5148714,
-    "CT" = 3565287,
-    "NE" = 1934408,
-    "KY" = 4467673,
-    "WY" = 578759,
-    "IA" = 3155070,
-    "NM" = 2096829,
-    "ND" = 762062,
-    "WA" = 7614893,
-    "RMI" = 51433,
-    "TN" = 6829174,
-    "AS" = 49437, # american samoa
-    "MA" = 6892503,
-    "PA" = 12801989,
-    "NYC" = NA,
-    "OH" = 11689100,
-    "VA" = 8535519,
-    "MI" = 9986857,
-    "AL" = 4903185,
-    "GA" = 10617423,
-    "MS" = 2976149,
-    "WI" = 5822434,
-    "IL" = 12671821,
-    "PR" = 3193694,
-    "TX" = 28995881,
-    "ID" = 1787065,
-    "LA" = 4648794,
-    "OK" = 3956971,
-    "CA" = 39512223,
-    "NJ" = 8882190,
-    "IN" = 6732219,
-    "NV" = 3080156,
-    "AR" = 3017804,
-    "MN" = 5639632,
-    "MD" = 6045680,
-    "NY" = 19453561,
-    "OR" = 4217737,
-    "UT" = 3205958,
-    "WV" = 1792147,
-    "MO" = 6137428,
-    "DE" = 973764,
-    "SD" = 884659,
-    "RI" = 1059361,
-    "KS" = 2913314,
-    "NH" = 1359711,
-    "ME" = 1344212,
-    "MT" = 1068778,
-    "NC" = 10488084,
-    "DC" = 705749,
-    "AK" = 731545,
-    "HI" = 1415872,
-    "GU" = NA,
-    "VT" = 623989,
-    "VI" = 106235,
-    "MP" = NA,
-    "FSM" = NA,
-    "PW" = NA
-)
-population = rep(0, nrow(usdata))
-i = 1
-for (state in usdata$state) {
-    population[i] = state_pops[[state]]
-    i = i + 1
+# create 7-day rolling sum of new cases
+rs7 = function(x) {
+    rs = rep(NA, length(x))
+    j = 1
+    while(is.na(x[j]) & j < length(x)) {
+        j = j + 1
+    }
+    for (i in (j + 6): length(x)) {
+        rs[i] = sum(x[(i-6): i])
+    }
+    return(rs)
 }
-usdata$population = population
-colnames(usdata)
-#write.csv(usdata, file="usdata.csv")
 
-# get data
-path = file.path("..", "Datasets", "ontario_region_model_data",
-"ontario_region_model_data.csv")
-ont_data = read.csv(path)
-ont_data = data.table(ont_data)
-ont_data = ont_data[-c(1, 2)] # Drop index column and intercept column
-
-# create new lag variables:
-# new_casesi: new_cases on ith preceding day
-n_ont <- nrow(ont_data)
-for(i in 1:6){
-    ont_data[, paste0("new_cases",i) := c(rep(NA,i),new_cases[1:(n_ont-i)])]
+shift_n = function(x, n) {
+    m = length(x)
+    shifted_x = rep(NA, m)
+    if (n > 0) {
+        shifted_x[1:(m - n)] = x[(n+1):m]
+    } else {
+        shifted_x[-1:n] = x[1:(m+n)]
+    }
+    return(shifted_x)
 }
-colnames(ont_data)
-head(ont_data)
-ont_data = na.omit(ont_data) # remove NAs
-ont_data = data.table(ont_data)
-formula = new_lag7 ~ new_cases + pop_density + transit + parks + retail.rec +
-        workplaces + is_spring + is_summer + grocery.pharm + residential +
-        new_cases1 + new_cases2 + new_cases3 + new_cases4 + new_cases5 +
-        new_cases6 + is_fall + is_weekday + s(region, bs = 're') +
-        s(day_num, k=7)
-ont_model = gam(formula = formula,
-    family='poisson',
-    offset = log(population),
-    data = ont_data)
 
-ont_data[, pred1_nc := ont_model$fitted.values]
-ggplot(ont_data, aes(x = date)) +
-    geom_line(aes(y = new7), col="black") +
-    geom_line(aes(y = pred1_nc), col="red") +
-    theme_light()
-summary(ont_model)
+data = data %>%
+    group_by(region) %>%
+        mutate(new_rs = rs7(new_cases),
+               rsf7 = rs7(shift_n(new_cases, 7)),
+               rsp1 = rs7(shift_n(new_cases, -1)),
+               rsp2 = rs7(shift_n(new_cases, -2)),
+               rsp3 = rs7(shift_n(new_cases, -3)),
+               rsp4 = rs7(shift_n(new_cases, -4)),
+               rsp5 = rs7(shift_n(new_cases, -5)),
+               rsp6 = rs7(shift_n(new_cases, -6)),
+               rsp7 = rs7(shift_n(new_cases, -7)))
+data = data.table(data)
+write.csv(data, "full_data_rs7.csv")
+
+#
+# Model Negative Binomial GAM
+#
+
+# PCA
+names(data)
+mobility <- names(data)[8:13]
+cases <- grep("rs", names(data), value=T)
+
+ids <- which(apply(!is.na(data[,..mobility]),1,all))
+pca_mobility <- princomp(data[ids,..mobility], cor = T)
+plot(pca_mobility)
+pca_mobility$loadings
+
+data[ids, pca1 := pca_mobility$scores[,1]]
+data[ids, pca2 := pca_mobility$scores[,2]]
+data[ids, pca3 := pca_mobility$scores[,3]]
+
+# Formula
+formula <- rsf7 ~ s(new_rs, k = 6) + s(rsp2, k = 6) + s(rsp2, k = 6) + s(rsp6, k = 6) +
+    s(rsp7, k = 6) + population:pca1 + population:pca2 + population:pca3 + pop_density + region
+
+id <- which(apply(!is.na(cbind(data[,..mobility],data[,..cases])), 1, all))
+data2 <- data[id,]
+
+# Model
+nb_mod <- gam(formula, data, family = nb(link="sqrt"))
+summary(nb_mod)
+
+# plot smooth effects
+plot(nb_mod, residuals = T)
+
+# check diagnostics
+gam.check(nb_mod)
+
+AIC(nb_mod)
+
+
+#
+#  ==============================  Discrete Case Count Data  ============================
+#
+
+path = file.path("..", "Datasets", "full_data_7SMA.csv")
+data_dis = read.csv(path) # new_cases is 7 SMA
+data_dis = data.table(data_dis) #data_dis will be for discrete case count data
+
+data_dis$date = as.Date(data_dis$date)
+
+# Because we are looking at moving averages, somehow it does not make
+# sense to do a poisson regression (on non-integers).
+# But there is a quick fix: looking at weekly totals.
+
+data_dis[, new_cases := as.integer(round(new_cases*7))]
+
+# Let us create our "lag" variables
+data_dis[, new_cases_f7 := as.integer()] # 7 days in the future (next 7 days block)
+data_dis[, new_cases_p2 := as.integer()] # 2 days in the past
+data_dis[, new_cases_p4 := as.integer()]
+data_dis[, new_cases_p6 := as.integer()]
+data_dis[, new_cases_p7 := as.integer()]
+
+for(reg in unique(data_dis$region)){
+    data_dis[(date+7) %in% data_dis$date & region == reg,]$new_cases_f7 <-
+        data_dis[date %in% (data_dis$date+7) & region == reg,new_cases]
+
+    data_dis[(date-2) %in% data_dis$date & region == reg,]$new_cases_p2 <-
+        data_dis[date %in% (data_dis$date-2) & region == reg,new_cases]
+    data_dis[(date-4) %in% data_dis$date & region == reg,]$new_cases_p4 <-
+        data_dis[date %in% (data_dis$date-4) & region == reg,new_cases]
+    data_dis[(date-6) %in% data_dis$date & region == reg,]$new_cases_p6 <-
+        data_dis[date %in% (data_dis$date-6) & region == reg,new_cases]
+    data_dis[(date-7) %in% data_dis$date & region == reg,]$new_cases_p7 <-
+        data_dis[date %in% (data_dis$date-7) & region == reg,new_cases]
+}
+
+# PCA Stuff
+
+names(data_dis)
+mobility <- names(data_dis)[8:13]
+
+cases <- grep("new_cases", names(data_dis), value=T)
+
+ids <- which(apply(!is.na(data_dis[,..mobility]),1,all))
+pca_mobility <- princomp(data_dis[ids,..mobility], cor = T)
+plot(pca_mobility)
+pca_mobility$loadings
+
+data_dis[ids, pca1 := pca_mobility$scores[,1]]
+data_dis[ids, pca2 := pca_mobility$scores[,2]]
+##
+
+# Formulas
+
+formula <- new_cases_f7 ~ s(new_cases, k = 7) + s(new_cases_p2, k = 7) + s(new_cases_p4, k = 7) + s(new_cases_p6, k = 7) +
+    s(new_cases_p7, k = 7) + population:pca1 + population:pca2 + pop_density + region
+
+id <- which(apply(!is.na(cbind(data_dis[,..mobility],data_dis[,..cases])), 1, all))
+data_dis2 <- data_dis[id,]
+
+# =============================== GAM model: Poisson =====================
+
+pois_mod <- gam(formula, data_dis2, family = "poisson")
+summary(pois_mod)
+
+# plot smooth effects
+plot(pois_mod, residuals = T)
+
+# check diagnostics
+gam.check(pois_mod)
+
+AIC(pois_mod)
+
+# =============================== GAM model: Negative Binomial ============
+
+nb_mod <- gam(formula, data_dis2, family = nb(link="sqrt"))
+summary(nb_mod)
+
+# plot smooth effects
+plot(nb_mod, residuals = T)
+
+# check diagnostics
+gam.check(nb_mod)
+
+AIC(nb_mod)
+
+#
+#  ==============================  Continuous Case Count Data  =============
+#
+
+path = file.path("..", "Datasets", "full_data_7SMA.csv")
+data = read.csv(path) # new_cases is 7 SMA
+data = data.table(data)
+
+data$date = as.Date(data$date)
+
+# Let us create our "lag" variables
+data[, new_cases_f7 := as.double()] # 7 days in the future (next 7 days block)
+data[, new_cases_p2 := as.double()] # 2 days in the past
+data[, new_cases_p4 := as.double()]
+data[, new_cases_p6 := as.double()]
+data[, new_cases_p7 := as.double()]
+
+for(reg in unique(data$region)){
+    data[(date+7) %in% data$date & region == reg,]$new_cases_f7 <-
+        data[date %in% (data$date+7) & region == reg,new_cases]
+
+    data[(date-2) %in% data$date & region == reg,]$new_cases_p2 <-
+        data[date %in% (data$date-2) & region == reg,new_cases]
+    data[(date-4) %in% data$date & region == reg,]$new_cases_p4 <-
+        data[date %in% (data$date-4) & region == reg,new_cases]
+    data[(date-6) %in% data$date & region == reg,]$new_cases_p6 <-
+        data[date %in% (data$date-6) & region == reg,new_cases]
+    data[(date-7) %in% data$date & region == reg,]$new_cases_p7 <-
+        data[date %in% (data$date-7) & region == reg,new_cases]
+}
+
+# PCA stuff
+
+names(data)
+mobility <- names(data)[8:13]
+
+cases <- grep("new_cases", names(data), value=T)
+
+ids <- which(apply(!is.na(data[,..mobility]),1,all))
+pca_mobility <- princomp(data[ids,..mobility], cor = T)
+plot(pca_mobility)
+pca_mobility$loadings
+
+data[ids, pca1 := pca_mobility$scores[,1]]
+data[ids, pca2 := pca_mobility$scores[,2]]
+
+# Formulas
+
+formula <- new_cases_f7 ~ s(new_cases, k = 7) + s(new_cases_p2, k = 7) + s(new_cases_p4, k = 7) + s(new_cases_p6, k = 7) +
+    s(new_cases_p7, k = 7) + population:pca1 + population:pca2 + pop_density + region
+
+id <- which(apply(!is.na(cbind(data[,..mobility],data[,..cases])), 1, all))
+data2 <- data[id,]
+
+#  ==============================  GAM model: Gaussian  ========================
+
+g_mod <- gam(formula, data = data2, family = gaussian)
+summary(g_mod)
+
+# plot smooth effects
+plot(g_mod, residuals = T)
+
+# check diagnostics
+gam.check(g_mod)
+
+AIC(g_mod)
+
+#  ==============================  GAM model: Scaled t  ========================
+
+t_mod <- gam(formula, data = data2, family = scat)
+summary(t_mod)
+
+# plot smooth effects
+plot(t_mod, residuals = T)
+
+# check diagnostics
+gam.check(t_mod)
+
+AIC(t_mod)
