@@ -1,1 +1,0 @@
-# covid_case_comp
